@@ -1,4 +1,4 @@
-pragma solidity >0.4.22;
+pragma solidity ^0.4.22;
 
 contract Coin {
     mapping(address => uint) public balances;
