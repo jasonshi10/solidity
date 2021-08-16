@@ -1,0 +1,17 @@
+{
+  "name": "first-ethereum-dapp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ganache-cli": "^6.12.2",
+    "http-server": "^13.0.0",
+    "web3": "^1.5.2"
+  }
+}
