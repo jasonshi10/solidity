@@ -146,15 +146,59 @@ class App extends Component {
                 <div>
                   <button type='submit' className='btn btn-primary' onClick={(e) => this.withdraw(e)}>WITHDRAW</button>
                 </div>
-                </Tab>
-              </Tabs>
-              </div>
-            </main>
-          </div>
+              </Tab>
+              <Tab eventKey="borrow" title="Borrow">
+                <div>
+
+                <br></br>
+                  Do you want to borrow tokens?
+                  <br></br>
+                  (You'll get 50% of collateral, in Tokens)
+                  <br></br>
+                  Type collateral amount (in ETH)
+                  <br></br>
+                  <br></br>
+                  <form onSubmit={(e) => {
+
+                    e.preventDefault()
+                    let amount = this.borrowAmount.value
+                    amount = amount * 10 **18 //convert to wei
+                    this.borrow(amount)
+                  }}>
+                    <div className='form-group mr-sm-2'>
+                      <input
+                        id='borrowAmount'
+                        step="0.01"
+                        type='number'
+                        ref={(input) => { this.borrowAmount = input }}
+                        className="form-control form-control-md"
+                        placeholder='amount...'
+                        required />
+                    </div>
+                    <button type='submit' className='btn btn-primary'>BORROW</button>
+                  </form>
+                </div>
+              </Tab>
+              <Tab eventKey="payOff" title="Payoff">
+                <div>
+
+                <br></br>
+                  Do you want to payoff the loan?
+                  <br></br>
+                  (You'll receive your collateral - fee)
+                  <br></br>
+                  <br></br>
+                  <button type='submit' className='btn btn-primary' onClick={(e) => this.payOff(e)}>PAYOFF</button>
+                </div>
+              </Tab>
+            </Tabs>
+            </div>
+          </main>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 }
 
 export default App;
