@@ -125,7 +125,7 @@ class App extends Component {
         </nav>
         <div className="container-fluid mt-5 text-center">
         <br></br>
-          <h1>Velatis, a Decentralized Banking System</h1>
+          <h1>Welcome to Velatis, a Decentralized Banking System</h1>
           <h2>{this.state.account}</h2>
           <br></br>
           <div className="row">
