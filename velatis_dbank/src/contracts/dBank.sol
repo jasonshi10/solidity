@@ -110,7 +110,7 @@ contract dBank {
     require(token.transferFrom(msg.sender, address(this), collateralEther[msg.sender] / 2), 'Error, cannot receive tokens');
 
     //calc 10% fee
-    uint fee = collateralEther[msg.sender] * 0.1;
+    uint fee = collateralEther[msg.sender] / 10;
 
     //send user's collateral minus fee
     msg.sender.transfer(collateralEther[msg.sender] - fee);
