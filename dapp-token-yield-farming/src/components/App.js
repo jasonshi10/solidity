@@ -8,22 +8,25 @@ import Main from './Main'
 import './App.css'
 
 class App extends Component {
-
+  // call the willmount which is a lifecycle callback function to call the loadWeb3 and loadBlockchainData functions first
   async componentWillMount() {
     await this.loadWeb3()
     await this.loadBlockchainData()
   }
 
+  // this function loads web3 to connect the app to the blockchain, reusable module for many dapps developments
   async loadBlockchainData() {
     const web3 = window.web3
-
+    // get the account
     const accounts = await web3.eth.getAccounts()
     this.setState({ account: accounts[0] })
-
+    // get networkID
     const networkId = await web3.eth.net.getId()
 
-    // Load DaiToken
+    // load DaiToken abi json file find networkID
+    // networkID will give us the address which is saved as daiTokenData.address. we need abi and the address to create a javascript version of smart contracts
     const daiTokenData = DaiToken.networks[networkId]
+    // if both address and abi exist, create a javascript version of contract
     if(daiTokenData) {
       const daiToken = new web3.eth.Contract(DaiToken.abi, daiTokenData.address)
       this.setState({ daiToken })
@@ -86,7 +89,8 @@ class App extends Component {
       this.setState({ loading: false })
     })
   }
-
+// loading status - we keep track of loading bc when the app is loading we don't want to show the contents on the page
+// but once all the contracts and functions above are loaded we set loading: false (line 89)
   constructor(props) {
     super(props)
     this.state = {

@@ -7,6 +7,7 @@ contract TokenFarm {
   string public name = "Dapp Token Farm";
   DappToken public dappToken;
   DaiToken public daiToken;
+  address public owner;
 
   // keep track of all the stakers so that we can reward them with dapp tokens
   address[] public stakers;
@@ -19,6 +20,7 @@ contract TokenFarm {
   constructor(DappToken _dappToken, DaiToken _daiToken) public {
       dappToken = _dappToken;
       daiToken = _daiToken;
+      owner = msg.sender;
   }
 
   // 1. stake tokens
@@ -44,11 +46,23 @@ contract TokenFarm {
   }
 
   // 2. unstaking tokens (withdraw)
+  function unstakeTokens() public {
+    // fetch the balance
+    uint balance = stakingBalance[msg.sender];
 
+    // require amount greater than 0
+    require(balance > 0, 'staking balance cannot be 0');
+
+    // unstake dai tokens
+    daiToken.transfer(msg.sender, balance);
+
+    // reset staking balance
+    stakingBalance[msg.sender] = 0;
+  }
 
   // 3. issuing tokens
   function issueTokens() public {
-    require(msg.sender == owner, 'caller must be the owner')
+    require(msg.sender == owner, 'caller must be the owner');
     // for loop to iterate through stakers array. this is what for loop looks like in solidity
     for (uint i=0; i<stakers.length; i++) {
       address recipient = stakers[i];
