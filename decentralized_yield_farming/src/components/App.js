@@ -101,7 +101,7 @@ class App extends Component {
       daiTokenBalance: '0',
       dappTokenBalance: '0',
       stakingBalance: '0',
-      loading: true
+      loading: false
     }
   }
 
