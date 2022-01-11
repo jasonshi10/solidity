@@ -636,7 +636,143 @@ contract Account {
     }
 }
 
+/*
+Function Modifier
 
+Modifiers are code that can be run before and / or after function call.
+Modifiers can be used to:
+- restrict access
+- validate inputs
+- guard against reentrancy hack
+*/
+
+contract FunctionModifier {
+    // we will use these variables to demonstrate how to use
+    // modifiers.
+
+    address public owner;
+    uint public x = 10;
+    bool public locked;
+
+    constructor() {
+        // set the transaction sender as the owner of the contract.
+        owner = msg.sender;
+    }
+
+    // modifier to check that the caller is the owner of the contract.
+    modifier onlyOwner() {
+        // set the transaction sender as the owner of the contract.
+        require(msg.sender == owner, "Not owner");
+        // underscore is a special character only used inside
+        // a function modifier and it tells Solidity to execute the rest of the code.
+        //when solidity finds -; it will execute the function. it is like a placeholder for functions execution.
+        _;
+    }
+
+    // modifiers can take inputs. this modifier checks that the address passed in is not the zero address.
+    modifier validAddress(address _addr) {
+        require(_addr != address(0), "Not valid address");
+        _;
+    }
+
+    function changeOwner(address _newOwner) public onlyOwner validAddress(_newOwner) {
+        owner = _newOwner;
+    }
+
+    // modifiers can be called before and / or after a function.
+    // this modifier prevents a function from being called while it is still executing.
+    modifier noReentrancy() {
+        require(!locked, "No reentrancy");
+
+        locked = true;
+        _;
+        locked = false;
+    }
+
+    function decrement(uint i) public noReentrancy {
+        x -= i;
+
+        if (i > 1) {
+            decrement(i - 1);
+        }
+    }
+
+}
+
+/*
+Events
+Events allow logging to the ethereum blockchain. some use cases for events are:
+- listening for events and updating user interface
+- a cheap form of storage
+*/
+contract Event {
+    // event declaration
+    // up to 3 parameters can be indexed
+    // indexed parameters helps you filter the logs by the indexed parameter
+    event Log(address indexed sender, string message);
+    event AnotherLog();
+
+    function test() public {
+        emit Log(msg.sender, "Hello world");
+        emit Log(msg.sender, "Hello EVM");
+        emit AnotherLog();
+    }
+}
+
+/*
+Constructor
+A constructor is an optional function that is executed upon contract creation
+here are examples of how to pass arguments to constructors.
+*/
+
+// base contract X
+contract X {
+    string public name;
+
+    constructor(string memory _name) {
+        name = _name;
+    }
+}
+
+// base contract y
+contract Y {
+    string public text;
+
+    constructor(string memory _text) {
+        text = _text;
+    }
+}
+
+// there are 2 ways to initialize parent contract with parameters.
+// pass the parameters here in the inheritance list.
+contract BXY is X("input to X"), Y("input to Y") {
+
+}
+
+contract CXY is X, Y {
+    // pass the parameters here in the constructor,
+    // similar to function modifiers.
+    constructor(string memory _name, string memory _text) X(_name) Y(_text) {}
+}
+
+// parent constructors are always called in the order of inheritance regardless of the order of inheritance
+// regardless of the order of parent contracts listed in the constructor of the child contract.
+
+// order of constructors called:
+// 1. X
+// 2. Y
+// 3. DXY
+contract DXY is X, Y {
+    constructor() X("X was called") Y("Y was called") {}
+}
+
+// order of constructors called:
+// 1. X
+// 2. Y
+// 3. EXY
+contract EXY is X, Y {
+    constructor() Y("Y was called") X("X was called") {}
+}
 
 /*
 Inheritance
