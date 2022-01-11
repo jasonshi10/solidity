@@ -777,7 +777,7 @@ contract EXY is X, Y {
 /*
 Inheritance
 Solidity supports multiple inheritance. contracts can inherit other contract by using
-ths is keyword. function that is going to be overridden by a child contract must be declared
+'is' keyword. function that is going to be overridden by a child contract must be declared
 as virtual. function that is going to override a parent function must use the keyword override.
 order of inheritance is important.
 you have to list the parent contract in the order from 'most base-like' to 'most derived'.
@@ -831,5 +831,167 @@ contract D is B, C {
 contract F is A, B {
     function foo() public pure override(A, B) returns (string memory) {
         return super.foo();
+    }
+}
+
+/*
+Shadowing inherited state variables
+unlike functions, state variables cannot be overridden by re-declaring it in the child contract.
+let's learn how to correctly override inherited state variables.
+*/
+contract A_Inherit {
+    string public name = "Contract A";
+
+    function getName() public view returns (string memory) {
+        return name;
+    }
+}
+
+// shawdoing is disallowed in solidity 0.6
+// this will not compile
+// contract B is A {string public name = "Contract B"};
+contract CA is A_Inherit {
+    // this is the correct way to override inherited state variables.
+    constructor() {
+        name = "Contract C";
+    }
+
+    // CA.getName returns "Contract C"
+}
+
+/*
+Calling parent contracts
+parent contracts can be called directly, or by using the keyword super.
+by using the keyword super, all of the immediate parent contracts will be called.
+
+Inheritance tree
+   AP
+ /  \
+BP   CP
+ \ /
+  DP
+*/
+
+contract AP {
+    // this is called an event. you can emit events from your function
+    // and they are logged into the transaction log
+    // in our case, this will be useful for tracing function calls.
+    event Log(string message);
+
+    // Base functions can be overridden by inheriting contracts to change their behavior if they are marked as virtual.
+    // The overriding function must then use the override keyword in the function header.
+
+    function foo() public virtual {
+        emit Log("AP.foo called");
+    }
+
+    function bar() public virtual {
+        emit Log("AP.bar called");
+    }
+}
+
+contract BP is AP {
+    function foo() public virtual override {
+        emit Log("BP.foo called");
+        AP.foo();
+    }
+    //The super keyword in Solidity gives access to the immediate parent contract from which the current contract is derived.
+    function bar() public virtual override {
+        emit Log("BP.bar called");
+        super.bar();
+    }
+}
+
+contract CP is AP {
+    function foo() public virtual override {
+        emit Log("CP.fool called");
+        AP.foo();
+    }
+
+    function bar() public virtual override {
+        emit Log("CP.bar called");
+        super.bar();
+    }
+}
+
+contract DP is BP, CP {
+    // try:
+    // call DP.foo and check the transaction logs
+    // although DP inherits AP BP and CP. it only called CP and then AP
+    function foo() public override(BP, CP) {
+        super.foo();
+    }
+
+    // try:
+    // call DP.bar and check the transaction logs
+    // DP called CP, then BP, and finally AP.
+    // although super was called twice (by BP and CP) it only called A once.
+    function bar() public override(BP, CP) {
+        super.bar();
+    }
+}
+
+/*
+Visibility
+functions and state variables have to declare whether they are accessible by other contracts.
+Functions can be declared as
+- public -> any contract and account can call
+- private -> only inside the contract that defines the function
+- internal -> only inside contract that inherits as an internal function
+- external -> only other contracts and accounts can call
+State variables can be declared as public, private, or internal but not external
+*/
+contract Base {
+    // private function can only be called inside this contract
+    // contracts that inherit this contract cannot call this function
+    function privateFunc() private pure returns (string memory) {
+        return "private function called";
+    }
+
+    function testPrivateFunc() public pure returns (string memory) {
+        return privateFunc();
+    }
+
+    // internal function can be called
+    // - inside this contract
+    // - inside contracts that inherit this contract
+    function internalFunc() internal pure returns (string memory) {
+        return "internal function called";
+    }
+
+    function testInternalFunc() public pure virtual returns (string memory) {
+        return internalFunc();
+    }
+
+    // public function can be called
+    // - inside this contract
+    // - inside contracts that inherit this contract
+    // - by other contracts and accounts
+    function publicFunc() public pure returns (string memory) {
+        return "public function called";
+    }
+
+    // external functions can only be called by other contracts and accounts
+    function externalFunc() external pure returns (string memory) {
+        return "external function called";
+    }
+
+    // this function will not compile since we're trying to call an external function here.
+    // function testExternalFunc() public pure returns (string memory) { return externalFunc(); }
+
+    // state variables
+    string private privateVar = "my private variable";
+    string internal internalVar = "my internal variable";
+    string public publicVar = "my public variable";
+    // state variables cannot be external so this code won't compile.
+    // string external externalVar = "my external variable";
+}
+
+contract Child is Base {
+    // inherited contracts do not have access to private functions and state variables
+    // function testPrivateFunc() public pure returns (string memory) { return internalFunc(); }
+    // internal function can be called inside child contracts.
+    function testInternalFunc() public pure override returns (string memory) {
+        return internalFunc();
     }
 }
