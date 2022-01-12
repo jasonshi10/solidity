@@ -995,3 +995,214 @@ contract Child is Base {
         return internalFunc();
     }
 }
+
+/*
+Interface
+you can interact with other contracts by declaring an Interface.
+Interface
+- cannot have any functions implemented
+- can inherit from other interfaces
+- all declared functions must be external
+- cannot declare a constructor
+- cannot declare state variables
+*/
+contract Counter_ {
+    uint public count;
+
+    function increment() external {
+        count += 1;
+    }
+}
+
+// declare an interface called ICounter
+interface ICounter {
+    function count() external view returns (uint);
+
+    function increment() external;
+}
+
+contract MyContract {
+    function incrementCounter(address _counter) external {
+        ICounter(_counter).increment();
+    }
+
+    function getCount(address _counter) external view returns (uint) {
+        return ICounter(_counter).count();
+    }
+}
+// Uniswap example
+interface UniswapV2Factory {
+    function getPair(address tokenA, address tokenB)
+        external
+        view
+        returns (address pair);
+}
+
+interface UniswapV2Pair {
+    function getReserves()
+        external
+        view
+        returns (
+            uint112 reserve0,
+            uint112 reserve1,
+            uint32 blockTimestampLast
+        );
+}
+
+contract UniswapExample {
+    address private factory = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    address private dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address private weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
+    function getTokenReserves() external view returns (uint, uint) {
+        address pair = UniswapV2Factory(factory).getPair(dai, weth);
+        (uint reserve0, uint reserve1, ) = UniswapV2Pair(pair).getReserves();
+        return (reserve0, reserve1);
+    }
+}
+
+/*
+Payable
+functions and addresses declared payable can receive ether into the contract.
+*/
+contract Payable {
+    // payable address can receive ether
+    address payable public owner;
+
+    // payable constructor can receive ether
+    constructor() payable {
+        owner = payable(msg.sender);
+    }
+
+    // function to deposit ether into this contract.
+    // call this function along with some ether.
+    // the balance of this contract will be automatically updated.
+    function deposit() public payable {}
+
+    // call this function along with some Ether.
+    // the function will throw an error since this function is not payable.
+    function notPayable() public {}
+
+    // function to withdraw all ether from this contract
+    function withdraw() public {
+    // get the amount of ether stored in this contract
+    uint amount = address(this).balance;
+
+    // send all ether to owner
+    // owner can receive ether since the address of owner is payable
+    (bool success, ) = owner.call{ value: amount }("");
+    require(success, "failed to send ether");
+    }
+
+    // function to transfer ether from this contract to address from input
+    function transfer(address payable _to, uint _amount) public {
+        // note that "to" is declared as payable
+        (bool success, ) = _to.call{value:_amount}("");
+        require(success, "failed to send ether");
+    }
+}
+
+/*
+Sending Ether(transfer, send, call)
+How to send ether?
+you can send ether to other contracts by
+- transfer (2300 gas, throws error)
+- send (2300 gas, returns bool)
+- call (foward all gas or set gas, returns bool)
+
+How to receive ether?
+a contract receiving ether must have at least one of the functions below
+- receive() external payable
+- fallback() external payable
+receive() is called if msg.data is empty, otherwise fallback() is called.
+
+Which method should you use?
+call in combination with re-entrancy guard is the recommended method to use after Dec 2019
+Guard against re-entrancy by
+- making all state changes before calling other contracts
+- using re-entrancy guard modifier
+*/
+
+contract ReceiveEther {
+        /*
+    Which function is called, fallback() or receive()?
+
+           send Ether
+               |
+         msg.data is empty?
+              / \
+            yes  no
+            /     \
+receive() exists?  fallback()
+         /   \
+        yes   no
+        /      \
+    receive()   fallback()
+    */
+
+    // function to receive ether. msg.data must be empty
+    receive() external payable {}
+
+    // fallback function is called when msg.data is not empty
+    fallback() external payable {}
+
+    function getBalance() public view returns (uint) {
+        return address(this).balance;
+    }
+}
+
+contract SendEther {
+    function sendViaTransfer(address payable _to) public payable {
+        // this function is no longer recommended for sending ether.
+        _to.transfer(msg.value);
+    }
+
+    function sendViaSend(address payable _to) public payable {
+        // send returns a boolean value indicating success or failure.
+        // this function is not recommended for sending ether
+        bool sent = _to.send(msg.value);
+        require(sent, "failed to send ether");
+    }
+
+    function sendViaCall(address payable _to) public payable {
+        // call returns a boolean value indicating success or failure.
+        // this is the current recommended method to use.
+        (bool sent, bytes memory data) = _to.call{value: msg.value}("");
+        require(sent, "failed to send ether");
+    }
+}
+
+/*
+Fallback
+fallback is a function that does not take any arguments and does not return anything.
+it is executed either when
+- a function that does not exist is called or
+- ether is sent directly to a contract but receive() does not exist or msg.data is not empty.
+fallback has a 2300 gas limit when called by transfer or send.
+*/
+contract Fallback {
+    event Log(uint gas);
+
+    // fallback function must be declared as external
+    fallback() external payable {
+        // send / transfer (forward 2300 gas to this fallback function)
+        // call (forwards all of the gas)
+        emit Log(gasleft());
+    }
+
+    // helper function to check the balance of this contract
+    function getBalance() public view returns (uint) {
+        return address(this).balance;
+    }
+}
+
+contract SendToFallback {
+    function transferToFallback(address payable _to) public payable {
+        _to.transfer(msg.value);
+    }
+
+    function callFallback(address payable _to) public payable {
+        (bool sent, ) = _to.call{value: msg.sender}("");
+        require(sent, "faile to send ether);
+    }
+}
