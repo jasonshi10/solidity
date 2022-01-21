@@ -121,3 +121,50 @@ mapping (address => mapping (address => uint)) public custodians;
 
 // to delete
 delete balances["John"];
+delete balances; // sets all elements to 0
+
+// unlike other languages, cannot iterate thru all elements in mapping
+// without knowing source keys - can build data structure on top to do this
+
+// Structs
+struct Bank {
+    address owner;
+    uint balance;
+}
+Bank b = Bank({
+    owner: msg.sender,
+    balance: 5
+});
+// or
+Bank c = Bank(msg.sender, 5);
+
+c.balance = 5; // set to new value
+delete b;
+// sets to initial value, set all variables in struct to 0, except mappings
+
+// enums
+enum State { Created, Locked, Inactive }; // often used for state machine
+State public state; // declare variable from enum
+state = State.Created;
+// enums can be explicitly converted to ints
+uint createdState = uint(State.Created); // 0
+
+/*
+data locations: memory vs storage vs calldata - all complex types
+(arrays, structs) have a data location.
+memory does not persist, storage does.
+default is storage for local and state variables, memory for func params
+stack holds small local variables.
+for most types, can explicitly set which data location to use.
+
+3. simple operators
+comparisons, bit operators and arithmetic operators are provided
+exponentiation: **
+*/
+
+// 4. global variables of note
+// ** this **
+this; // address of contract
+// often used at end of contract life to transfer remaining balance to party
+this.balance;
+this.someFunction(); // calls func externally via call, not via internal jump
