@@ -168,3 +168,81 @@ this; // address of contract
 // often used at end of contract life to transfer remaining balance to party
 this.balance;
 this.someFunction(); // calls func externally via call, not via internal jump
+
+// ** msg - current message received by the contract ** **
+msg.sender; // address of sender
+msg.value; // amount of ether provided to this contract in wei, the function should be marked "payable"
+msg.data; // bytes, complete call data
+msg.gas; // remaining gas
+
+// ** tx - this transaction **
+tx.origin; // address of sender of the trx
+tx.gasprice; // gas price of the trx
+
+// ** block - information about current block **
+now; // current time (approximately), alias for block.timestamp (uses unix time)
+// note that this can be manipulated by miners, so use carefully
+
+block.number; // current block number
+block.difficulty; // current block difficulty
+block.blockhash(1); // returns bytes32, only works for most recent 256 blocks
+block.gasLimit();
+
+// ** storage - persistent storage hash **
+storage['abc'] = 'def'; // maps 256 bit words to 256 bit words
+
+// 4. functions and more
+// A. functions
+// simple function
+function increment(uint x) returns (uint) {
+    x += 1;
+    return x;
+}
+
+// functions can return many arguments, and by specifying returned arguments
+// name don't need to explicitly return
+function increment(uint x, uint y) returns (uint x, uint y) {
+    x += 1;
+    y += 1;
+}
+// call previous function
+uint (a,b) = increment(1,1);
+
+// 'view' (alias for 'constant')
+// indicates that function does not/cannot change persistent vars
+// view function execute locally, not on blockchain
+// notes: constant keyword will soon be deprecated.
+uint y = 1;
+
+function increment(uint x) view returns (uint x) {
+    x += 1;
+    y += 1;
+    // y is a state variable, and cannot be changed in a view function
+}
+
+// 'pure' is more strict than 'view' and does not even allow reading of state variables
+// the exact rules are more complicated so see the link here http://solidity.readthedocs.io/en/develop/contracts.html#view-functions
+
+// function visibility specifiers
+// these can be placed where 'view' is, including:
+// public - visible external and internally (default for function)
+// external - only visible externally (including a call made with this)
+// private - only visible in the current contract
+// internal - only visible in cureent contract, and those deriving from it
+
+// generally, a good idea to mark each function explicitly
+
+// functions hoisted - and can assign a function to a variable
+function a() {
+    var z = b;
+    b();
+}
+
+function b() {
+
+}
+
+// all functions that receive ether must be marked 'payable'
+function depositEther() public payable {
+    balances[msg.sender] += msg.value;
+}
