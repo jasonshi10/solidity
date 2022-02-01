@@ -322,3 +322,195 @@ modifier checkValue(uint amount) {
 }
 
 // 6. branching and loops
+// all basic logic blocks work - including if/else, for, while, break, continue
+// return - but no switch
+
+// syntax same as javascript, but no type conversion from non-boolean
+// to boolean (comparison operators must be used to get the boolean val)
+
+// for loops that are determined by user behavior, be careful - as contracts have
+// a maximal amount of gas for a block of code - and will fail if that is exceeded
+// for example:
+for (uint x = 0; x < refundAddressList.length; x++) {
+    refundAddressList[x].transfer(SOME_AMOUNT);
+}
+
+// two errors above:
+// 1. a failure on transfer stops the loop from completing, tying up money
+// 2. this loop could be arbitrarily long (based on the amount of users who need refunds), and
+// therefore may always fail as it exceeds the max gas for a block
+// instead, you should let people withdraw individually from their subaccount, and mark withdrawn
+// e.g. favor pull payments over push payments
+
+// 7. objects/contracts
+// a. calling external contract
+contract InfoFeed {
+    function info() payable returns (uint ret) {
+        return 42;
+    }
+}
+
+contract Consumer {
+    InfoFeed feed; // points to contract on blockchain
+
+    // set feed to existing contract instance
+    function setFeed (address addr) {
+        feed = InfoFeed(addr);
+    }
+
+    // set feed to new instance of contract
+    function createNewFeed() {
+        feed = new InfoFeed(); // new instance created; constructor called
+    }
+
+    function callFeed() {
+        // final parentheses call contract, can optionally add
+        // custom ether value or gas
+        feed.info.value(10).gas(800)();
+    }
+}
+
+// b. inheritance
+
+// order matters, last inherited contract (i.e., 'def')
+// can override parts of previously inherited contracts
+contract MyContract is abc, def("a custom argument to def") {
+
+    // override function
+    function z() {
+        if (msg.sender == owner) {
+            def.z(); // call overridden function from def
+            super.z(); // call immediate parent overridden function
+        }
+    }
+}
+
+// abstract function
+function someAbstractFunction(uint x);
+// cannot be compiled, so used in base/abstract contracts
+// that are then implemented
+
+// c. import
+import "filename";
+import "github.com/ethereum/dapp-bin/library/iterable_mapping.sol";
+
+// 8. other keywords
+
+// a. selfdestruct
+// selfdestruct current contract, sending funds to address (often creator)
+selfdestruct(some_address);
+
+// remove storage/code from current/future blocks
+// helps think clients, but previous data persists in blockchain
+
+// common pattern, lets owner end the contract and receive remaining funds
+function remove() {
+    if(msg.sender == creator) { // only let the contract creator do this
+        selfdestruct(creator); // makes contract inactive, returns funds
+    }
+}
+
+// may want to deactivate contract manually, rather than selfdestruct
+// (ether sent to selfdestructed contract is lost)
+
+// 9. contract design notes
+
+// a. obfuscation
+// all variables are publicly viewable on blockchain, so anything
+// that is private needs to be obfuscated (e.g. hashed w/ secret)
+
+// step 1: 1. commit to something, 2. reveal commitment
+keccak256("some_bid_amnt", "some secret") // commit
+
+// call contract's reveal function in the future
+// showing bid plus secret that hashes to SHA3
+reveal(100, "mySecret");
+
+// b. storage optimization
+// writing to blockchain can be expensive, as data stored forever; encourages
+// smart ways tpo use memory (eventually, compilation will be better, but for now
+// benefits to planning data structures - and storing min amount in blockchain)
+
+// cost can often be high for items like multidimensional arrays
+// (cost is for storing data - not declaring unfilled variables)
+
+// c. data access in blockchain
+// cannot restrict human or computer from reading contents of transaction or trasaction's state
+
+// while 'private' prevents other *contracts* from reading data directly
+// any other party can still read data in blockchain
+
+// all data to start of time is stored in blockchain, so
+// anyone can observe all previous data and changes
+
+// e. Oracles and External Data
+// Oracles are ways to interact with your smart contracts outside the blockchain.
+// They are used to get data from the real world, send post requests, to the real world
+// or vise versa.
+
+// Time-based implementations of contracts are also done through oracles, as
+// contracts need to be directly called and can not "subscribe" to a time.
+// Due to smart contracts being decentralized, you also want to get your data
+// in a decentralized manner, other your run into the centralized risk that
+// smart contract design matter prevents.
+
+// To easiest way get and use pre-boxed decentralized data is with Chainlink Data Feeds
+// https://docs.chain.link/docs/get-the-latest-price
+// We can reference on-chain reference points that have already been aggregated by
+// multiple sources and delivered on-chain, and we can use it as a "data bank"
+// of sources.
+
+// You can see other examples making API calls here:
+// https://docs.chain.link/docs/make-a-http-get-request
+
+// And you can of course build your own oracle network, just be sure to know
+// how centralized vs decentralized your application is.
+
+// Setting up oracle networks yourself
+
+// d. Cron Job
+// Contracts must be manually called to handle time-based scheduling; can create external
+// code to regularly ping, or provide incentives (ether) for others to
+//
+
+// E. Observer Pattern
+// An Observer Pattern lets you register as a subscriber and
+// register a function which is called by the oracle (note, the oracle pays
+// for this action to be run)
+// Some similarities to subscription in Pub/sub
+
+// This is an abstract contract, both client and server classes import
+// the client should implement
+contract SomeOracleCallback {
+    function oracleCallback(int _value, uint _time, bytes32 info) external;
+}
+
+contract SomeOracle {
+    SomeOracleCallback[] callbacks; // array of all subscribers
+
+
+    // register subscriber
+    function addSubscriber(SomeOracleCallback a) {
+        callbacks.push(a);
+    }
+
+    function notify(value, time, info) private {
+        for (uint i = 0; i< callbacks.length; i++) {
+            // all called subscribers must implement the oracleCallback
+            callbacks[i].oracleCallback(value, time, info);
+        }
+    }
+
+    function doSomething() public {
+        // code to do something
+
+        // notify all subscribers
+        notify(_value, _time, _info);
+    }
+}
+
+// now, your client contract can addSubscriber by importing SomeOracleCallback
+// and registering with Some Oracle
+
+// f. State machines
+// see crowdfunding example for State enum and inState modifier
