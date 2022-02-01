@@ -221,6 +221,7 @@ function increment(uint x) view returns (uint x) {
 }
 
 // 'pure' is more strict than 'view' and does not even allow reading of state variables
+// pure does not read anything from the blockchain whereas view can read data from blockchain
 // the exact rules are more complicated so see the link here http://solidity.readthedocs.io/en/develop/contracts.html#view-functions
 
 // function visibility specifiers
@@ -246,3 +247,78 @@ function b() {
 function depositEther() public payable {
     balances[msg.sender] += msg.value;
 }
+
+// prefer loops to recursion (max call stack depth is 1024)
+// also, don't set up loops that you haven't bounded, as this can hit the gas limit
+
+// b. events
+// events are notify external parties; easy to search and access events from
+// outside blockchain (with lightweight clients)
+// typically declare after contract parameters
+
+// typically, capitalized - and add log in front to be explicit and prevent confusion with a function call
+
+// declare
+event LogSent(address indexed from, address indexed to, uint amount); // note capital first letter
+
+// call
+LogSent(from, to, amount);
+
+/**
+
+for an external party (a contract or external entity), to watch using the web3 js library:
+
+// The following is Javascript code, not Solidity code
+Coin.LogSent().watch({}, '', function(error, result) {
+    if (!error) {
+        console.log("Coin transfer: " + result.args.amount +
+            " coins were sent from " + result.args.from +
+            " to " + result.args.to + ".");
+        console.log("Balances now:\n" +
+            "Sender: " + Coin.balances.call(result.args.from) +
+            "Receiver: " + Coin.balances.call(result.args.to));
+    }
+}
+**/
+
+// common paradigm for one contract to depend on another (e.g. a contract that
+// depends on current exchange rate provided by another
+
+// c. modifiers
+// modifiers validate inputs to functions such as minimal balance or user auth;
+// similar to guard clause in other languages
+
+// '_'(underscore) often included as last line in body, and indicates function being called should be placed there
+modifier onlyAfter(uint _time) {
+    require (now >= _time);
+    _;
+    }
+modifier onlyOwner {
+    require(msg.sender == owner);
+    _;
+}
+modifier onlyIfStateA (State currState) {
+    require(currState == State.A);
+    _;
+}
+
+// append right after function declaration
+function changeOwner(newOwner)
+onlyAfter(someTime)
+onlyOwner()
+onlyIfState(State.A)
+{
+    owner = newOwner;
+}
+
+// underscore can be included before end of body
+// but explicitly returning will skip, so use carefully
+modifier checkValue(uint amount) {
+    _;
+    if (msg.value > amount) {
+        uint amountToRefund = amount = msg.value;
+        msg.sender.transfer(amountToRefund);
+    }
+}
+
+// 6. branching and loops
