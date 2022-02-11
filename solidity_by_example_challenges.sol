@@ -246,3 +246,106 @@ contract ErrorHandling {
         return x / y;
     }
 }
+
+/*
+Function modifiers are reuseable code that can be run before and / or after a function call.
+
+Here are some examples of how they are used.
+
+1. Restrict access
+2. Validate inputs
+3. Check states right before and after a function call
+
+*/
+contract FunctionModifier {
+    bool public paused;
+    uint public count;
+
+    // Modifire to check if not paused
+    modifier whenNotPaused() {
+        require(!paused, "paused");
+        // Underscore is a special character only used inside
+        // a function modifier and it tells Solidity to
+        // execute the rest of the code.
+        _;
+    }
+
+    function setPause(bool _paused) external {
+        paused = _paused;
+    }
+
+    // This function will throw an error if paused
+    function inc() external whenNotPaused {
+        count += 1;
+    }
+
+    function dec() external whenNotPaused {
+        count -= 1;
+    }
+
+    modifier whenPaused() {
+        require(paused, "not paused");
+        _;
+    }
+
+    function reset() external whenPaused {
+        count = 0;
+    }
+
+    // Modifiers can take inputs.
+    // Here is an example to check that x is < 10
+    modifier cap(uint _x) {
+        require(_x < 10, "x >= 10");
+        _;
+    }
+
+    function incBy(uint _x) external whenNotPaused cap(_x) {
+        count += _x;
+    }
+
+    // Modifiers can execute code before and after the function.
+    modifier sandwich() {
+        // code here
+        _;
+        // more code here
+    }
+}
+
+/*
+constructor is a special function that is called only once when the contract is deployed.
+constructor is only called once and when the contract is deployed. You can set value in Deploy() tab in metamask.
+The main purpose of the the constructor is to set state variables to some initial state.
+*/
+
+contract ConstructorIntro {
+    address public owner;
+    uint public x;
+
+    constructor(uint _x) {
+        // Here the owner is set to the caller
+        owner = msg.sender;
+        x = _x;
+    }
+}
+
+/*
+Create a contract that has an owner and only the owner can assign a new owner.
+*/
+
+contract Ownable {
+    address public owner;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(owner == msg.sender, "not owner");
+        _;
+    }
+
+    function setOwner(address _newOwner) external onlyOwner {
+        require(_newOwner != address(0), "new owner = zero address");
+        owner = _newOwner;
+    }
+}
