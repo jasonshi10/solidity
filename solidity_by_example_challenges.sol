@@ -86,3 +86,163 @@ view functions can read state and global variables.
 
 pure functions cannot read neither state nor global variables.
 */
+
+contract ViewAndPureFunctions {
+    uint public num;
+
+    // This is a view function. It reads the state variable "num"
+    function viewFunc() external view returns (uint) {
+        return num;
+    }
+
+    // This is a pure function. It does not read any state or global variables.
+    function pureFunc() external pure returns (uint) {
+        return 1;
+    }
+
+    function addToNum(uint x) external view returns (uint) {
+        return num + x;
+    }
+
+    function add(uint x, uint y) external pure returns (uint) {
+        return x + y;
+    }
+}
+
+contract Counter {
+    uint public count;
+
+    function inc() external {
+        count += 1;
+    }
+
+    function dec() external {
+        count -= 1;
+    }
+}
+
+contract DefaultValues {
+    int public i; // 0
+    bytes32 public b32; // 0x0000000000000000000000000000000000000000000000000000000000000000 64 0s after 0x
+    address public addr; // 0x0000000000000000000000000000000000000000 40 0s after 0x
+    uint public u;
+    bool public b;
+}
+
+/*
+State variables can be declared as constant. Value of constant variables must be set before compilation and it cannot be modified after the contract is compiled.
+Why use constants?
+
+Compared to state variables, constant variables use less gas.
+
+Style guide: Following convention, constants should be named with all capital letters with underscore separating words.
+*/
+
+contract Constants {
+    // declare state variables as constant
+    address public constant MY_ADDR =
+        0x777788889999AaAAbBbbCcccddDdeeeEfFFfCcCc;
+    uint public constant MY_UINT = 123;
+}
+
+contract IfElse {
+    function ifElse(uint _x) external pure returns (uint) {
+        if (_x < 10) {
+            return 1;
+        } else if (_x < 20) {
+            return 2;
+        } else {
+            return 3;
+        }
+    }
+
+    function ternaryOperator(uint _x) external pure returns (uint) {
+        // condition ? value to return if true : value to return if false
+        return _x > 1 ? 10 : 20;
+    }
+
+    function exercise_1(uint _x) external pure returns (uint) {
+        if (_x > 0) {
+            return 1;
+        }
+        return 0;
+    }
+
+    function exercise_2(uint _x) external pure returns (uint) {
+        return _x > 0 ? 1 : 0;
+    }
+}
+
+contract ForAndWhileLoops {
+    function loop() external pure {
+        // for loop
+        for (uint i = 0; i < 10; i++) {
+            if (i == 3) {
+                // Skip to next iteration with continue
+                continue;
+            }
+            if (i == 5) {
+                // Exit loop with break
+                break;
+            }
+        }
+
+        // while loop
+        uint j;
+        while (j < 10) {
+            j++;
+        }
+    }
+
+    function sum(uint _n) external pure returns (uint) {
+        uint s;
+        for (uint i = 1; i <= _n; i++) {
+            s += i;
+        }
+        return s;
+    }
+}
+
+/*
+Solidity has 3 ways to throw an error, require, revert and assert.
+
+require is used to validate inputs and check conditions before and after execution.
+revert is like require but more handy when the condition to check is nested in several if statements.
+assert is used to check invariants, code that should never be false. Failing assertion probably means that there is a bug.
+
+An error will undo all changes made during a transaction.
+*/
+contract ErrorHandling {
+    function testRequire(uint _i) external pure {
+        // Require should be used to validate conditions such as:
+        // - inputs
+        // - conditions before execution
+        // - return values from calls to other functions
+        require(_i <= 10, "i > 10");
+    }
+
+    function testRevert(uint _i) external pure {
+        // Revert is useful when the condition to check is complex
+        // Use revert when there are multiple if statements
+        // This code does the exact same thing as the example above
+        if (_i > 10) {
+            revert("i > 10");
+        }
+    }
+
+    uint num;
+
+    function testAssert() external view {
+        // Assert should only be used to test for internal errors,
+        // and to check invariants.
+
+        // Here we assert that num is always equal to 0
+        // since it is impossible to update the value of num
+        assert(num == 0);
+    }
+
+    function div(uint x, uint y) external pure returns (uint) {
+        require( y > 0, 'div by 0');
+        return x / y;
+    }
+}
