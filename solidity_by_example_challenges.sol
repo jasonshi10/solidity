@@ -349,3 +349,197 @@ contract Ownable {
         owner = _newOwner;
     }
 }
+
+contract FunctionOutputs {
+    // Functions can return multiple outputs.
+    function returnMany() public pure returns (uint, bool) {
+        return (1, true);
+    }
+
+    // Outputs can be named.
+    function named() public pure returns (uint x, bool b) {
+        return (1, true);
+    }
+
+    // Outputs can be assigned to their name.
+    // In this case the return statement can be omitted.
+    function assigned() public pure returns (uint x, bool b) {
+        x = 1;
+        b = true;
+    }
+
+    // Use destructuring assignment when calling another
+    // function that returns multiple outputs.
+    function destructuringAssigments() public pure {
+        (uint i, bool b) = returnMany();
+
+        // Outputs can be left out.
+        (, bool bb) = returnMany();
+    }
+
+    function myFunc() external view returns(address, bool) {
+        return (msg.sender, false);
+    }
+}
+
+/*
+Arrays can have fixed or dynamic size. Fixed size arrays can be initialized in memory.
+
+Arrays have several functionalities.
+
+push - Push new element to the end of the array.
+pop - Remove last element from the end of the array, shrink array length by 1.
+length - Current length of array.
+*/
+contract ArrayBasic {
+    // Several ways to initialize an array
+    uint[] public arr;
+    uint[] public arr2 = [1, 2, 3];
+    // Fixed sized array, all elements initialize to 0
+    uint[3] public arrFixedSize;
+
+    // Insert, read, update and delete
+    function examples() external {
+        // Insert - add new element to end of array
+        arr.push(1);
+        // Read
+        uint first = arr[0];
+        // Update
+        arr[0] = 123;
+        // Delete does not change the array length.
+        // It resets the value at index to it's default value,
+        // in this case 0
+        delete arr[0];
+
+        // pop removes last element
+        arr.push(1);
+        arr.push(2);
+        // 2 is removed
+        arr.pop();
+
+        // Get length of array
+        uint len = arr.length;
+
+        // Fixed size array can be created in memory
+        uint[] memory a = new uint[](3);
+        // push and pop are not available
+        // a.push(1);
+        // a.pop(1);
+        a[0] = 1;
+    }
+
+    function get(uint i) external view returns (uint) {
+        return arr[i];
+    }
+
+    function push(uint x) external {
+        arr.push(x);
+    }
+
+    function remove(uint i) external {
+        delete arr[i];
+    }
+
+    function getLength() external view returns(uint) {
+        return arr.length;
+    }
+}
+
+// Mappings are like hash tables or dictionary in Python, they are useful for fast efficient lookups.
+contract MappingBasic {
+    // Mapping from address to uint used to store balance of addresses
+    mapping(address => uint) public balances;
+
+    // Nested mapping from address to address to bool
+    // used to store if first address is a friend of second address
+    mapping(address => mapping(address => bool)) public isFriend;
+
+    function examples() external {
+        // Insert
+        balances[msg.sender] = 123;
+        // Read
+        uint bal = balances[msg.sender];
+        // Update
+        balances[msg.sender] += 456;
+        // Delete
+        delete balances[msg.sender];
+
+        // msg.sender is a friend of this contract
+        isFriend[msg.sender][address(this)] = true;
+    }
+
+    function get(address _addr) external view returns (uint) {
+        return balances[_addr];
+    }
+
+    function set(address _addr, uint _val) external {
+        balances[_addr] = _val;
+    }
+
+    function remove(address _addr) external {
+        delete balances[_addr];
+    }
+}
+
+// Structs allow data to be grouped together.
+contract StructExamples {
+    struct Car {
+        string model;
+        uint year;
+        address owner;
+    }
+
+    Car[] public cars;
+
+    function examples() external {
+        // 3 ways to initialize a struct
+        Car memory toyota = Car("Toyota", 1980, msg.sender);
+        Car memory lambo = Car({
+            model: "Lamborghini",
+            year: 1999,
+            owner: msg.sender
+        });
+        Car memory tesla;
+        tesla.model = "Tesla";
+        tesla.year = 2020;
+        tesla.owner = msg.sender;
+
+        // Push to array
+        cars.push(toyota);
+        cars.push(lambo);
+        cars.push(tesla);
+        // Initialize and push in single line of code
+        // it is the same as initialize Car Ferrari in memory first
+        cars.push(Car("Ferrari", 2000, msg.sender));
+
+        // Get reference to Car struct stored in the array cars at index 0
+        Car storage car = cars[0];
+        // Update
+        car.year = 1988;
+        // delete
+        delete car.year;
+
+        delete cars[1];
+    }
+
+    function register(string memory _model, uint _year) external {
+        cars.push(Car({model: _model, year: _year, owner: msg.sender}));
+    }
+
+    function get(uint _index)
+        external
+        view
+        returns (
+            string memory model,
+            uint year,
+            address owner
+        )
+    {
+        Car memory car = cars[_index];
+        return (car.model, car.year, car.owner);
+    }
+
+    function transfer(uint _index, address _owner) external {
+        cars[_index].owner = _owner;
+    }
+}
