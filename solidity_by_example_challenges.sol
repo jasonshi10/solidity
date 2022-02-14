@@ -543,3 +543,116 @@ contract StructExamples {
         cars[_index].owner = _owner;
     }
 }
+
+// Solidity supports enumerables and they are useful to model choice and to keep track of state.
+contract EnumExamples {
+    // Enum representing shipping status
+    enum Status {
+        // No shipping request
+        None,
+        Pending,
+        Shipped,
+        // Accepted by receiver
+        Completed,
+        // Rejected by receiver (damaged, wrong item, etc...)
+        Rejected,
+        // Canceled before shipped
+        Canceled
+    }
+
+    Status public status;
+
+    struct Order {
+        address buyer;
+        Status status;
+    }
+
+    Order[] public orders;
+
+    // Returns uint
+    // None      - 0
+    // Pending   - 1
+    // Shipped   - 2
+    // Completed - 3
+    // Rejected  - 4
+    // Canceled  - 5
+    function get() external view returns (Status) {
+        return status;
+    }
+
+    // Update
+    function set(Status _status) external {
+        status = _status;
+    }
+
+    // Update to a specific enum
+    function cancel() external {
+        status = Status.Canceled;
+    }
+
+    // Reset enum to it's default value, 0
+    function reset() public {
+        delete status;
+    }
+
+    function ship() public {
+        status = Status.Shipped;
+    }
+}
+
+/*
+Data locations
+Variables are stored in one of three places.
+
+storage - variable is a state variable (store on blockchain).
+memory - variable is in memory and it exists temporary during a function call
+calldata - special data location that contains function arguments
+
+use storage for dynamic data you will update.
+use memory if you only need to read data or modify it without saving it on the blockchain
+use calldata for function inputs, saves gas by avoiding copies
+
+Difference between memory and calldata
+
+calldata is like memory but not modifiable. calldata saves gas.
+*/
+contract DataLocations {
+    // Data locations of state variables are storage
+    uint public x;
+    uint public arr;
+
+    struct MyStruct {
+        uint foo;
+        string text;
+    }
+
+    mapping(address => MyStruct) public myStructs;
+
+    // Example of calldata inputs, memory output
+    function examples(uint[] calldata y, string calldata s)
+        external
+        returns (uint[] memory)
+    {
+        // Store a new MyStruct into storage
+        myStructs[msg.sender] = MyStruct({foo: 123, text: "bar"});
+
+        // Get reference of MyStruct stored in storage.
+        MyStruct storage myStruct = myStructs[msg.sender];
+        // Edit myStruct
+        myStruct.text = "baz";
+
+        // Initialize array of length 3 in memory
+        uint[] memory memArr = new uint[](3);
+        memArr[1] = 123;
+        return memArr;
+    }
+
+    function set(address _addr, string calldata _text) external {
+        MyStruct storage myStruct = myStructs[_addr];
+        myStruct.text = _text;
+    }
+
+    function get(address _addr) external view returns (string memory) {
+        return myStructs[_addr].text;
+    }
+}
