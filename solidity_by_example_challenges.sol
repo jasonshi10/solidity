@@ -685,3 +685,34 @@ contract TodoList {
 
 
 }
+
+
+contract IterableMapping {
+    mapping(address => uint) public balances;
+    // to keep track of the size of the mapping and if the key is inserted or not
+    mapping(address => bool) public inserted;
+    // you can't get the size of a mapping, so create an array to keep track of addresses (also as the keys to the mapping)
+    address[] public keys;
+
+    function set(address _addr, uint _bal) external {
+        balances[_addr] = _bal;
+
+        if (!inserted[_addr]) {
+            inserted[_addr] = true;
+            keys.push(_addr);
+        }
+    }
+
+    function get(uint _index) external view returns (uint) {
+        address key = keys[_index];
+        return balances[key];
+    }
+
+    function first() external view returns (uint) {
+        return balances[keys[0]];
+    }
+
+    function last() external view returns (uint) {
+        return balances[keys[keys.length - 1]];
+    }
+}
