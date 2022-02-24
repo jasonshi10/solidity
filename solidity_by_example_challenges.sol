@@ -716,3 +716,31 @@ contract IterableMapping {
         return balances[keys[keys.length - 1]];
     }
 }
+
+// delete does not remove the element from the list (only reset it to 0),
+// so use pop instead
+contract ArrayShift {
+    uint[] public arr = [1, 2, 3];
+
+    function remove(uint _index) external {
+        require(_index < arr.length, "index out of bound");
+
+        for (uint i = _index; i < arr.length - 1; i++) {
+            arr[i] = arr[i + 1];
+        }
+        arr.pop();
+
+    }
+}
+
+
+// more gas efficient way of shrinking an array,
+// replace the index with the last element and pop the last element
+contract ArrayReplaceLast {
+    uint[] public arr = [1, 2, 3, 4];
+
+    function remove(uint _index) external {
+        arr[_index] = arr[arr.length - 1];
+        arr.pop();
+    }
+}
