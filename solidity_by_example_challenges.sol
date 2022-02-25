@@ -744,3 +744,55 @@ contract ArrayReplaceLast {
         arr.pop();
     }
 }
+
+/*
+events allow smart contracts to log data to the blockchain without using state variables.
+events are commonly used for debugging, monitoring and a cheap alternative to state variables for storing data.
+only up to 3 parameters can be indexed
+*/
+contract Event {
+    event Log(string message, uint val);
+    // Up to 3 parameters can be indexed
+    event IndexedLog(address indexed sender, uint val);
+
+    function examples() external {
+        emit Log("Foo", 123);
+        emit IndexedLog(msg.sender, 123);
+    }
+
+    event Message(address indexed _from, address indexed _to, string _message);
+
+    function sendMessage(address _addr, string calldata _message) external {
+        emit Message(msg.sender, _addr, _message);
+    }
+
+}
+
+/*
+inheritance - override
+contracts can inherit other contract by using the is keyword.
+function that can be overridden by a child contract must declare virtual.
+function that is overriding a parent function must declare override.
+*/
+contract A {
+    // foo() can be overridden by child contract
+    function foo() public pure virtual returns (string memory) {
+        return "A";
+    }
+
+    function bar() public pure virtual returns (string memory) {
+        return "A";
+    }
+}
+
+// Inherit other contracts by using the keyword 'is'.
+contract B is A {
+    // Overrides A.foo()
+    function foo() public pure override returns (string memory) {
+        return "B";
+    }
+
+    function bar() public pure override returns (string memory) {
+        return "B";
+    }
+}
