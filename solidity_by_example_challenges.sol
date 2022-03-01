@@ -796,3 +796,134 @@ contract B is A {
         return "B";
     }
 }
+
+/*
+Solidity supports multiple inheritance.
+Order of inheritance is important.
+You must list the parent contracts in the order from “most base-like” to “most derived”.
+*/
+contract X {
+    function foo() public pure virtual returns (string memory) {
+        return "X";
+    }
+
+    function bar() public pure virtual returns (string memory) {
+        return "X";
+    }
+}
+
+contract Y is X {
+    // Overrides X.foo
+    // Also declared as virtual, this function can be overridden by child contract
+    function foo() public pure virtual override returns (string memory) {
+        return "Y";
+    }
+
+    function bar() public pure virtual override returns (string memory) {
+        return "Y";
+    }
+}
+
+// Order of inheritance - most base-lke to derived
+contract Z is X, Y {
+    // Overrides both X.foo and Y.foo
+    function foo() public pure override(X, Y) returns (string memory) {
+        return "Z";
+    }
+
+    function bar() public pure override(X, Y) returns (string memory) {
+        return "Z";
+    }
+}
+
+// Calling Parent Constructors
+// There are 2 ways to pass parameters into parent constructors.
+contract S {
+    string public name;
+
+    constructor(string memory _name) {
+        name = _name;
+    }
+}
+
+contract T {
+    string public text;
+
+    constructor(string memory _text) {
+        text = _text;
+    }
+}
+
+// 2 ways to call parent constructors
+contract U is S("S"), T("T") {
+
+}
+// Order of execution, regardless the order of S or T in the constructor
+// 1. S
+// 2. T
+// 3. V
+contract V is S, T {
+    // Pass the parameters here in the constructor,
+    constructor(string memory _name, string memory _text) S(_name) T(_text) {}
+}
+
+// Order of execution
+// 1. S
+// 2. T
+// 3. W
+contract W is S("S"), T {
+    constructor(string memory _text) T(_text) {}
+}
+
+/*
+Calling Parent Functions
+Parent contracts can be called directly, or by using the keyword super.
+By using super, all immediate parent contracts will be called.
+*/
+contract E {
+    // This event will be used to trace function calls.
+    event Log(string message);
+
+    function foo() public virtual {
+        emit Log("E.foo");
+    }
+
+    function bar() public virtual {
+        emit Log("E.bar");
+    }
+}
+
+contract F is E {
+    function foo() public virtual override {
+        emit Log("F.foo");
+        E.foo();
+    }
+
+    function bar() public virtual override {
+        emit Log("F.bar");
+        super.bar();
+    }
+}
+
+contract G is E {
+    function foo() public virtual override {
+        emit Log("G.foo");
+        E.foo();
+    }
+
+    function bar() public virtual override {
+        emit Log("G.bar");
+        super.bar();
+    }
+}
+
+contract H is F, G {
+    function foo() public override(F, G) {
+        // Calls G.foo() and then E.foo()
+        super.foo();
+    }
+
+    function bar() public override(F, G) {
+        super.bar();
+    }
+}
