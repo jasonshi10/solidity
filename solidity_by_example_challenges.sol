@@ -1007,3 +1007,32 @@ contract VisibilityChild is VisibilityBase {
         return y + z + internalFunc() + publicFunc();
     }
 }
+
+/*
+Immutable variables
+Variables declared immutable are like constants, except their value can be set inside the constructor.
+immutable is like constant except you can only initialize it once when the contract is deployed.
+*/
+contract Immutable {
+    // Write your code here
+    address public immutable owner;
+    constructor() {
+        owner = msg.sender;
+    }
+}
+
+/*
+Payable
+Functions and addresses declared as payable can receive Ether.
+*/
+contract Payable {
+    // Payable address can receive Ether
+    address payable public owner;
+
+    // Payable constructor can receive Ether
+    constructor() payable {
+        owner = payable(msg.sender);
+    }
+    // be able to sesnd eth when call this function
+    function deposit() payable external {}
+}
