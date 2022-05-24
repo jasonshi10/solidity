@@ -4,8 +4,7 @@ pragma solidity ^0.8.1;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IFakeERC20 {
-    function transferOwner(address addy) external;
-
+    function transferOwnership(address addy) external;
     function getOwner() external;
 }
 
@@ -88,6 +87,9 @@ contract Escrow is Ownable {
         //     ownerOfContract
         // );
 
+        IFakeERC20 contractBeingSoldIF = IFakeERC20(mySellerInfo.contractBeingSold);
+        contractBeingSoldIF.transferOwnership(address(this));
+
         escrowDetails[mySellerInfo.contractBeingSold] = mySellerInfo;
         emit SellerReady(mySellerInfo);
     }
@@ -112,6 +114,8 @@ contract Escrow is Ownable {
 
         // TODO:
         // transfer ERC 20 contract ownership to buyer
+        IFakeERC20 contractBeingSoldIF = IFakeERC20(seller.contractBeingSold);
+        contractBeingSoldIF.transferOwnership(buyer.buyerAddress);
 
         emit TransactionCompleted(buyer, seller);
         delete escrowDetails[seller.contractBeingSold];
@@ -125,4 +129,5 @@ contract Escrow is Ownable {
         );
         return seller.sellPrice;
     }
+    receive() external payable {}
 }
