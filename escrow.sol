@@ -1,104 +1,128 @@
-// SPDX-License-Identifier: GPL-3.0
-pragma solidity >=0.8.0;
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.8.1;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./BED.sol";
 
-contract escrow{
+interface IFakeERC20 {
+    function transferOwner(address addy) external;
 
-    // Declare state variables
-    address payable public buyer;
-    address payable public seller;
-    address payable public broker;
-    uint public price;
-    bool public isBuyerIn;
-    bool public isSellerIn;
+    function getOwner() external;
+}
 
-    // Define a constructor
-    constructor (
-    address payable _buyer,
-		address payable _seller,
-    uint _price) {
-		broker = payable(address(this));
-		buyer = _buyer;
-		seller = _seller;
-        price = _price;
-		currState = State.idle;
-	}
+contract Escrow is Ownable {
+    address payable internal ownerOfContract;
 
-  	// Define a enumerator 'State'
-  	enum State {
-          idle, await_payment, await_delivery, buyer_paid, ownership_transferred_to_escrow, complete
-  	}
-
-  	// Declare the object of the enumerator
-  	State public currState;
-
-  	// Define function modifier 'instate'
-  	modifier instate(State expected_state){
-  		require(currState == expected_state);
-  		_;
-  	}
-
-      // Define function modifier 'onlyBuyer'
-  	modifier onlyBuyer(){
-  		require(msg.sender == buyer, "Only buyer can call this method.");
-  		_;
-  	}
-
-  	// Define function modifier 'onlySeller'
-  	modifier onlySeller(){
-  		require(msg.sender == seller, "Only seller can call this method.");
-  		_;
-  	}
-
-      // Define function modifier 'onlyBroker'
-      // modifier onlyBroker(){
-  	// 	require(msg.sender == broker, "Only broker can call this method.");
-  	// 	_;
-  	// }
-
-      // Define function modifier 'escrowIdle'
-      modifier escrowIdle(){
-  		require(currState == State.idle);
-  		_;
-  	}
-
-    function initializeEscrow() escrowIdle public {
-          if (buyer != address(0)) {
-              isBuyerIn = true;
-          }
-          if (seller != address(0)) {
-              isSellerIn = true;
-          }
-          if (isBuyerIn && isSellerIn) {
-              currState = State.await_payment;
-          }
-      }
-
-    function pay(uint price) onlyBuyer payable public {
-          require(currState == State.buyer_paid, "Already paid");
-          // require(msg.value == price, "Wrong deposit amount");
-          (bool sent, ) = address(this).call{value: price}("");
-          require(sent, "Failed to send Ether");
-          currState = State.buyer_paid;
-      }
-
-    function transferOwnership() onlySeller instate(
-  	    State.buyer_paid) public {
-          require(address(this) != address(0), "Invalid escrow address");
-          BED.transferOwnership(seller, broker);
-          currState = State.ownership_transferred_to_escrow;
+    struct EscrowContracts {
+        address contractBeingSold;
+        address sellerAddress;
+        uint256 sellPrice;
+        address buyersAddress;
     }
 
-    function goodToSettle() instate(
-          State.ownership_transferred_to_escrow) public {
-          // transfer ownership to seller
-  		// transfer the fund to buyer
-  	}
+    struct BuyersInfo {
+        address contractBeingBought;
+        address buyerAddress;
+        uint256 sellPrice;
+    }
 
-    function getBalance() public view returns (uint256) {
-          return address(this).balance;
-  	}
+    mapping(address => EscrowContracts) public escrowDetails;
 
-  	receive() external payable {}
+    event SellerReady(EscrowContracts seller);
+    event TransactionCompleted(BuyersInfo buyer, EscrowContracts seller);
+
+    constructor() {
+        ownerOfContract = payable(msg.sender);
+    }
+
+    function setBuyersInfo(address contractBeingBought) external payable {
+        uint256 amount = msg.value; //amount sent
+        address buyerAddress = msg.sender; //buyer address
+
+        require(amount != 0, "Buyer did not send any amount");
+
+        BuyersInfo memory myBuyersInfo = BuyersInfo(
+            contractBeingBought,
+            buyerAddress,
+            amount
+        );
+
+        // verify sellers information matches buyers information, seller must go first
+        require(
+            escrowDetails[contractBeingBought].buyersAddress == msg.sender,
+            "Seller address did not match buyer"
+        );
+
+        buyerSendPay(myBuyersInfo);
+    }
+
+    function buyerSendPay(BuyersInfo memory myBuyersInfo) public payable {
+        EscrowContracts memory mySellerInfo = escrowDetails[
+            myBuyersInfo.contractBeingBought
+        ]; // Sellers Info
+
+        goodToGo(mySellerInfo, myBuyersInfo);
+    }
+
+    function setContractDetail(
+        address contractBeingSold,
+        uint256 sellPrice,
+        address buyerAddress
+    ) external {
+        address sellerAddress = msg.sender;
+
+        EscrowContracts memory mySellerInfo = EscrowContracts(
+            contractBeingSold,
+            sellerAddress,
+            sellPrice,
+            buyerAddress
+        ); // Buyers Information
+
+        sellerSendContract(mySellerInfo);
+    }
+
+    function sellerSendContract(EscrowContracts memory mySellerInfo) internal {
+        // TODO:
+        // call other contract and change manager ERC20
+        // revert if error
+        // IFakeERC20(mySellerInfo.contractBeingSold).transferOwner(
+        //     ownerOfContract
+        // );
+
+        escrowDetails[mySellerInfo.contractBeingSold] = mySellerInfo;
+        emit SellerReady(mySellerInfo);
+    }
+
+    function goodToGo(EscrowContracts memory seller, BuyersInfo memory buyer)
+        internal
+    {
+        require(
+            seller.sellPrice == buyer.sellPrice,
+            "Sell price doesn't match buy price"
+        );
+        require(
+            seller.contractBeingSold == buyer.contractBeingBought,
+            "Contract sold and bought not the same"
+        );
+        // good to go send values
+        // transfer
+        (bool success, ) = payable(seller.sellerAddress).call{
+            value: buyer.sellPrice
+        }("");
+        require(success, "Payment Failed to seller address");
+
+        // TODO:
+        // transfer ERC 20 contract ownership to buyer
+
+        emit TransactionCompleted(buyer, seller);
+        delete escrowDetails[seller.contractBeingSold];
+    }
+
+    function getSellerAmount(address myContract) public view returns (uint256) {
+        EscrowContracts memory seller = escrowDetails[myContract];
+        require(
+            seller.buyersAddress == msg.sender,
+            "Only buyer can see amount"
+        );
+        return seller.sellPrice;
+    }
+}
