@@ -1,16 +1,17 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.1;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+/// @dev use interface to interact with a deployed and ownable contract
+interface ITestERC20 {
+    function transferOwnership(address addr) external;
 
-interface IFakeERC20 {
-    function transferOwnership(address addy) external;
-    function getOwner() external;
+    function owner() external view returns (address);
 }
 
-contract Escrow is Ownable {
-    address payable internal ownerOfContract;
+/// @title Sell Your Contract Escrow Protocol
 
+contract Escrow {
+    // create a struct to group contract being sold, seller, buyer, and price together
     struct EscrowContracts {
         address contractBeingSold;
         address sellerAddress;
@@ -18,26 +19,60 @@ contract Escrow is Ownable {
         address buyersAddress;
     }
 
+    // create a struct for buyer information
     struct BuyersInfo {
         address contractBeingBought;
         address buyerAddress;
         uint256 sellPrice;
     }
 
+    // creat a mapping to keep track of EscrowContracts struct
     mapping(address => EscrowContracts) public escrowDetails;
 
+    // emit an event when seller is ready
     event SellerReady(EscrowContracts seller);
+
+    // emit an event when the transaction is completed
     event TransactionCompleted(BuyersInfo buyer, EscrowContracts seller);
 
-    constructor() {
-        ownerOfContract = payable(msg.sender);
+    /// @dev seller sends contract transaction details
+    function setContractDetail(
+         address contractBeingSold
+        ,uint256 sellPrice
+        ,address buyerAddress
+    ) external {
+        address sellerAddress = msg.sender;
+
+        EscrowContracts memory mySellerInfo = EscrowContracts(
+             contractBeingSold
+            ,sellerAddress
+            ,sellPrice
+            ,buyerAddress
+        );
+
+        // check if contract is owned by escrow
+        require(
+            ITestERC20(mySellerInfo.contractBeingSold).owner() == address(this),
+            "Seller has not transferred the ownership to the escrow"
+        );
+
+        // fill in escrow details
+        escrowDetails[mySellerInfo.contractBeingSold] = mySellerInfo;
+
+        // emit seller is ready
+        emit SellerReady(mySellerInfo);
     }
 
-    function setBuyersInfo(address contractBeingBought) external payable {
-        uint256 amount = msg.value; //amount sent
-        address buyerAddress = msg.sender; //buyer address
+    /// @dev buyer sends payment to the seller after seller provides contract transaction details and transferred ownership
+    function buyerSendPay(address contractBeingBought, uint256 price)
+        external
+        payable
+    {
+        uint256 amount = price;
+        address buyerAddress = msg.sender;
 
-        require(amount != 0, "Buyer did not send any amount");
+        // require buyer sends payment
+        require(amount != 0, "Buyer did not send any payment");
 
         BuyersInfo memory myBuyersInfo = BuyersInfo(
             contractBeingBought,
@@ -45,55 +80,27 @@ contract Escrow is Ownable {
             amount
         );
 
-        // verify sellers information matches buyers information, seller must go first
-        require(
-            escrowDetails[contractBeingBought].buyersAddress == msg.sender,
-            "Seller address did not match buyer"
-        );
-
-        buyerSendPay(myBuyersInfo);
-    }
-
-    function buyerSendPay(BuyersInfo memory myBuyersInfo) public payable {
         EscrowContracts memory mySellerInfo = escrowDetails[
             myBuyersInfo.contractBeingBought
-        ]; // Sellers Info
+        ];
 
+        // check if the contract ownership has transferred to the escrow contract
+        require(
+            ITestERC20(contractBeingBought).owner() == address(this),
+            "Seller has not transferred ownership to the escrow"
+        );
+
+        // check if the intended buyer address correct
+        require(
+            escrowDetails[contractBeingBought].buyersAddress == msg.sender,
+            "Buyer address did not match seller"
+        );
+
+        // call goodToGo function after buyer sends payment
         goodToGo(mySellerInfo, myBuyersInfo);
     }
 
-    function setContractDetail(
-        address contractBeingSold,
-        uint256 sellPrice,
-        address buyerAddress
-    ) external {
-        address sellerAddress = msg.sender;
-
-        EscrowContracts memory mySellerInfo = EscrowContracts(
-            contractBeingSold,
-            sellerAddress,
-            sellPrice,
-            buyerAddress
-        ); // Buyers Information
-
-        sellerSendContract(mySellerInfo);
-    }
-
-    function sellerSendContract(EscrowContracts memory mySellerInfo) internal {
-        // TODO:
-        // call other contract and change manager ERC20
-        // revert if error
-        // IFakeERC20(mySellerInfo.contractBeingSold).transferOwner(
-        //     ownerOfContract
-        // );
-
-        IFakeERC20 contractBeingSoldIF = IFakeERC20(mySellerInfo.contractBeingSold);
-        contractBeingSoldIF.transferOwnership(address(this));
-
-        escrowDetails[mySellerInfo.contractBeingSold] = mySellerInfo;
-        emit SellerReady(mySellerInfo);
-    }
-
+    /// @dev buyer sends payment to seller, escrow transfers the ownership to buyer
     function goodToGo(EscrowContracts memory seller, BuyersInfo memory buyer)
         internal
     {
@@ -105,29 +112,32 @@ contract Escrow is Ownable {
             seller.contractBeingSold == buyer.contractBeingBought,
             "Contract sold and bought not the same"
         );
-        // good to go send values
-        // transfer
-        (bool success, ) = payable(seller.sellerAddress).call{
-            value: buyer.sellPrice
-        }("");
-        require(success, "Payment Failed to seller address");
 
-        // TODO:
-        // transfer ERC 20 contract ownership to buyer
-        IFakeERC20 contractBeingSoldIF = IFakeERC20(seller.contractBeingSold);
-        contractBeingSoldIF.transferOwnership(buyer.buyerAddress);
+        // buyer sends payment to seller
+        (bool sent, ) = seller.sellerAddress.call{value: buyer.sellPrice}("");
+        require(sent, "Payment failed to send to seller address");
 
+        // use interface to transferownership to buyer
+        ITestERC20(seller.contractBeingSold).transferOwnership(
+            buyer.buyerAddress
+        );
+
+        // emit an event when transaction is completed
         emit TransactionCompleted(buyer, seller);
+
+        // delete stored contract transaction details
         delete escrowDetails[seller.contractBeingSold];
     }
 
+    /// @dev only buyer can check the listed price of the contract
     function getSellerAmount(address myContract) public view returns (uint256) {
         EscrowContracts memory seller = escrowDetails[myContract];
+
         require(
             seller.buyersAddress == msg.sender,
-            "Only buyer can see amount"
+            "Only buyer can see the price"
         );
+
         return seller.sellPrice;
     }
-    receive() external payable {}
 }
